@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS users (
-  id           CHAR(36)     NOT NULL PRIMARY KEY,
+  id           CHAR(36)     NOT NULL PRIMARY KEY DEFAULT (UUID()),
   email        VARCHAR(255) NOT NULL UNIQUE,
   username     VARCHAR(30)  NOT NULL UNIQUE,
   full_name    VARCHAR(50),
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 
 CREATE TABLE IF NOT EXISTS addresses (
-  id           CHAR(36)     NOT NULL PRIMARY KEY,
+  id           CHAR(36)     NOT NULL PRIMARY KEY DEFAULT (UUID()),
   user_id      CHAR(36)     NOT NULL,
   recipient    VARCHAR(50)  NOT NULL,
   phone        VARCHAR(30),

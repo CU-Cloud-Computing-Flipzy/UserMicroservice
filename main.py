@@ -11,8 +11,10 @@ from fastapi import (
     BackgroundTasks,
     status,
     Response,
+    Request
 )
 from fastapi.responses import JSONResponse
+from datetime import datetime
 
 from models.user import UserRead, UserCreate, UserUpdate
 from models.address import Address, AddressCreate, AddressUpdate
@@ -100,6 +102,19 @@ def fetch_address_by_id(address_id: UUID) -> Address:
     finally:
         conn.close()
 
+def make_user_etag(user) -> str:
+    # 假设 user.updated_at 是 datetime；若是 str，请先解析成 datetime
+    ts = int(user.updated_at.timestamp() if isinstance(user.updated_at, datetime) else datetime.fromisoformat(str(user.updated_at)).timestamp())
+    return f'W/"user-{user.id}-{ts}"'
+
+def user_link_headers(user_id) -> dict[str, str]:
+    return {
+        "Link": (
+            f'</users/{user_id}>; rel="self", '
+            f'</users>; rel="collection", '
+            f'</addresses?user_id={user_id}>; rel="addresses"'
+        )
+    }
 
 # ----------------------------------------------------------------------
 # Users collection & resources
@@ -115,7 +130,7 @@ def list_users(
     role: Optional[str] = Query(
         None,
         description="Filter by role",
-        regex="^(user|moderator|admin)$",
+        pattern="^(user|moderator|admin)$",
     ),
     is_active: Optional[bool] = Query(
         None, description="Filter by active/inactive status"
@@ -207,12 +222,38 @@ def create_user(payload: UserCreate, response: Response):
 
 
 @app.get("/users/{user_id}", response_model=UserRead, tags=["users"])
-def get_user(user_id: UUID):
-    return fetch_user_by_id(user_id)
+def get_user(user_id: UUID, request: Request, response: Response):
+    user = fetch_user_by_id(user_id) 
+    etag = make_user_etag(user)
+
+    # If-None-Match: 304
+    inm = request.headers.get("if-none-match")
+    if inm and inm == etag:
+        return Response(status_code=304, headers={"ETag": etag, **user_link_headers(user_id)})
+
+    #If success return ETag + Link
+    response.headers["ETag"] = etag
+    response.headers.update(user_link_headers(user_id))
+    return user
+
 
 
 @app.put("/users/{user_id}", response_model=UserRead, tags=["users"])
-def replace_user(user_id: UUID, payload: UserUpdate):
+def replace_user(user_id: UUID, payload: UserUpdate, request: Request, response: Response):
+    # 1) 读出当前版本，用于 ETag 预检
+    current = fetch_user_by_id(user_id)  # 404 由内部抛出或下面处理
+    if not current:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    current_etag = make_user_etag(current)
+
+    # 2) If-Match 预条件（并发/过期写保护）
+    if_match = request.headers.get("if-match")
+    if if_match and if_match != current_etag:
+        # 客户端的版本落后了
+        raise HTTPException(status_code=412, detail="Precondition Failed (ETag mismatch)")
+
+    # 3) 构造 UPDATE（保持你原先的字段构造方式）
     conn = get_connection()
     try:
         fields = []
@@ -231,21 +272,30 @@ def replace_user(user_id: UUID, payload: UserUpdate):
             params.append(payload.phone)
 
         if not fields:
-            # Nothing to update, just return current value
-            return fetch_user_by_id(user_id)
+            # 无改动：按规范仍返回当前资源，并带上 ETag/Link
+            response.headers["ETag"] = current_etag
+            response.headers.update(user_link_headers(user_id))
+            return current
 
+        # 注意：updated_at 若表上有 ON UPDATE CURRENT_TIMESTAMP 会自动更新
         sql = "UPDATE users SET " + ", ".join(fields) + " WHERE id = %s"
         params.append(str(user_id))
 
         with conn.cursor() as cur:
             cur.execute(sql, params)
             if cur.rowcount == 0:
+                # 理论上不会到这里（上面已 fetch），以防并发删除
                 raise HTTPException(status_code=404, detail="User not found")
-
+        conn.commit()
     finally:
         conn.close()
 
-    return fetch_user_by_id(user_id)
+    # 4) 返回最新资源 + 新 ETag + Link
+    updated = fetch_user_by_id(user_id)
+    new_etag = make_user_etag(updated)
+    response.headers["ETag"] = new_etag
+    response.headers.update(user_link_headers(user_id))
+    return updated
 
 
 @app.delete(
@@ -349,8 +399,15 @@ def create_address(payload: AddressCreate, response: Response):
 
 
 @app.get("/addresses/{address_id}", response_model=Address, tags=["addresses"])
-def get_address(address_id: UUID):
-    return fetch_address_by_id(address_id)
+def get_address(address_id: UUID, response: Response):
+    addr = fetch_address_by_id(address_id)  
+    response.headers["Link"] = (
+        f'</addresses/{address_id}>; rel="self", '
+        f'</addresses>; rel="collection", '
+        f'</users/{addr.user_id}>; rel="user"'
+    )
+    return addr
+
 
 
 @app.put("/addresses/{address_id}", response_model=Address, tags=["addresses"])
