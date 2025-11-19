@@ -31,6 +31,7 @@ class Address(BaseModel):
     }
 
 class AddressCreate(BaseModel):
+    user_id: UUID = Field(..., description="User ID (UUID)")
     recipient: str = Field(..., min_length=1, max_length=50)
     phone: Optional[str] = Field(None, min_length=6, max_length=30)
     country: str = Field(..., min_length=1, max_length=60)
@@ -42,6 +43,7 @@ class AddressCreate(BaseModel):
     model_config = {
         "json_schema_extra": {
             "example": {
+                "user_id": "6f3e3c14-1e1d-46fd-9a77-7d6d85b3d2c3",
                 "recipient": "Alice",
                 "phone": "+1-215-000-0000",
                 "country": "US",
