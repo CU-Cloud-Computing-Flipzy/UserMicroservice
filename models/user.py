@@ -50,7 +50,6 @@ class UserRead(BaseModel):
 class UserCreate(BaseModel):
     email: EmailStr = Field(..., description="email address")
     username: str = Field(..., min_length=3, max_length=30, description="username")
-    password: str = Field(..., min_length=8, max_length=72, description="password")
     full_name: Optional[str] = Field(None, min_length=1, max_length=50, description="full name")
     avatar_url: Optional[HttpUrl] = Field(None, description="avatar URL")
     phone: Optional[str] = Field(None, min_length=6, max_length=30, description="phone number")
@@ -60,7 +59,6 @@ class UserCreate(BaseModel):
             "example": {
                 "email": "alice@example.com",
                 "username": "alice_shop",
-                "password": "S3cureP@ssw0rd",
                 "full_name": "Alice Zhou",
                 "avatar_url": "https://cdn.example.com/avatars/alice.png",
                 "phone": "+1-215-000-0000"
