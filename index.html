@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User & Address Microservice UI</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        padding: 20px;
+        background-color: #f8f9fa;
+      }
+      .card {
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .scrollable-table {
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      pre {
+        background: #2d2d2d;
+        color: #cfcfcf;
+        padding: 10px;
+        border-radius: 5px;
+        max-height: 200px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row mb-4">
+        <div class="col-12 text-center">
+          <h1>Microservice Client</h1>
+          <p class="text-muted">Interaction with User & Address Service</p>
+        </div>
+        <div class="col-md-8 offset-md-2">
+          <div class="input-group">
+            <span class="input-group-text">API Base URL</span>
+            <input
+              type="text"
+              id="api-url"
+              class="form-control"
+              placeholder="http://localhost:8000"
+              value="http://127.0.0.1:8000"
+            />
+          </div>
+          <small class="text-muted">确保后端已配置 CORS。</small>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header bg-primary text-white">Create User</div>
+            <div class="card-body">
+              <form id="user-form">
+                <div class="mb-2">
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="u-username"
+                    placeholder="Username"
+                    required
+                  />
+                </div>
+                <div class="mb-2">
+                  <input
+                    type="email"
+                    class="form-control"
+                    id="u-email"
+                    placeholder="Email"
+                    required
+                  />
+                </div>
+                <div class="mb-2">
+                  <input
+                    type="password"
+                    class="form-control"
+                    id="u-password"
+                    placeholder="Password"
+                    required
+                  />
+                </div>
+                <div class="mb-2">
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="u-fullname"
+                    placeholder="Full Name"
+                  />
+                </div>
+                <div class="mb-2">
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="u-phone"
+                    placeholder="Phone"
+                  />
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                  Create User
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div class="card">
+            <div
+              class="card-header d-flex justify-content-between align-items-center"
+            >
+              <span>User List</span>
+              <button
+                class="btn btn-sm btn-outline-secondary"
+                onclick="fetchUsers()"
+              >
+                Refresh
+              </button>
+            </div>
+            <div class="card-body p-0 scrollable-table">
+              <table class="table table-hover mb-0" style="font-size: 0.9rem">
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th>ID (Click to Copy)</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="user-list"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header bg-success text-white">Create Address</div>
+            <div class="card-body">
+              <form id="addr-form">
+                <div class="mb-2">
+                  <label class="form-label small text-muted"
+                    >User ID (Click a user on the left)</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="a-userid"
+                    placeholder="UUID"
+                    required
+                    readonly
+                  />
+                </div>
+                <div class="row">
+                  <div class="col-6 mb-2">
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="a-country"
+                      placeholder="Country"
+                      required
+                    />
+                  </div>
+                  <div class="col-6 mb-2">
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="a-city"
+                      placeholder="City"
+                      required
+                    />
+                  </div>
+                </div>
+                <div class="mb-2">
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="a-street"
+                    placeholder="Street"
+                    required
+                  />
+                </div>
+                <div class="mb-2">
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="a-zip"
+                    placeholder="Postal Code"
+                    required
+                  />
+                </div>
+                <button type="submit" class="btn btn-success w-100">
+                  Create Address
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div class="card">
+            <div
+              class="card-header d-flex justify-content-between align-items-center"
+            >
+              <span>Address List</span>
+              <button
+                class="btn btn-sm btn-outline-secondary"
+                onclick="fetchAddresses()"
+              >
+                Refresh
+              </button>
+            </div>
+            <div class="card-body p-0 scrollable-table">
+              <table class="table table-hover mb-0" style="font-size: 0.9rem">
+                <thead>
+                  <tr>
+                    <th>City</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody id="addr-list"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row mt-3">
+        <div class="col-12">
+          <h5>Request Log / Status</h5>
+          <pre id="log-area">Waiting for actions...</pre>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // --- 工具函数 ---
+      const getUrl = (path) => {
+        const base = document
+          .getElementById("api-url")
+          .value.replace(/\/$/, "");
+        return `${base}${path}`;
+      };
+
+      const log = (msg, data = null) => {
+        const area = document.getElementById("log-area");
+        const time = new Date().toLocaleTimeString();
+        let content = `[${time}] ${msg}`;
+        if (data) content += "\n" + JSON.stringify(data, null, 2);
+        area.innerText = content;
+      };
+
+      // --- User Functions ---
+
+      async function fetchUsers() {
+        try {
+          const res = await fetch(getUrl("/users?limit=10"));
+          if (!res.ok) throw new Error(res.statusText);
+          const data = await res.json();
+
+          const tbody = document.getElementById("user-list");
+          tbody.innerHTML = "";
+          data.forEach((user) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                    <td>${user.username}</td>
+                    <td style="cursor:pointer; color:blue;" onclick="selectUser('${
+                      user.id
+                    }')" title="Click to select for Address">${user.id.substring(
+              0,
+              8
+            )}...</td>
+                    <td><button class="btn btn-sm btn-danger" onclick="deleteUser('${
+                      user.id
+                    }')">Del</button></td>
+                `;
+            tbody.appendChild(tr);
+          });
+          log("Users fetched successfully.");
+        } catch (e) {
+          log("Error fetching users: " + e.message);
+        }
+      }
+
+      function selectUser(id) {
+        // 这里的交互设计：点击列表中的用户ID，自动填入创建地址的 UserID 输入框
+        document.getElementById("a-userid").value = id;
+        // 实际上可以去 fetch 完整 ID，这里简化处理，假设 UI 存了完整 ID (为了演示代码简洁，这里需要后端返回完整ID，前端只显示部分)
+        // 修正：因为显示截断了，我们需要存储完整ID。
+        // 重新获取一次最简单:
+        fetch(getUrl(`/users/${id}`))
+          .then((r) => r.json())
+          .then((u) => {
+            document.getElementById("a-userid").value = u.id;
+            log(`Selected user: ${u.username}`);
+          });
+      }
+
+      document
+        .getElementById("user-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const payload = {
+            username: document.getElementById("u-username").value,
+            email: document.getElementById("u-email").value,
+            password: document.getElementById("u-password").value,
+            full_name: document.getElementById("u-fullname").value,
+            phone: document.getElementById("u-phone").value,
+          };
+
+          try {
+            const res = await fetch(getUrl("/users"), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(JSON.stringify(data));
+
+            log("User Created!", data);
+            fetchUsers(); // 刷新列表
+            document.getElementById("user-form").reset();
+          } catch (e) {
+            log("Error creating user: " + e.message);
+          }
+        });
+
+      async function deleteUser(id) {
+        if (!confirm("Delete this user?")) return;
+        await fetch(getUrl(`/users/${id}`), { method: "DELETE" });
+        fetchUsers();
+      }
+
+      // --- Address Functions ---
+
+      async function fetchAddresses() {
+        try {
+          const res = await fetch(getUrl("/addresses?limit=10"));
+          const data = await res.json();
+          const tbody = document.getElementById("addr-list");
+          tbody.innerHTML = "";
+          data.forEach((addr) => {
+            tbody.innerHTML += `
+                    <tr>
+                        <td>${addr.city}, ${addr.country}</td>
+                        <td><small>${addr.street} (${addr.postal_code})</small></td>
+                    </tr>
+                `;
+          });
+          log("Addresses fetched.");
+        } catch (e) {
+          log("Error fetching addresses: " + e.message);
+        }
+      }
+
+      document
+        .getElementById("addr-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const payload = {
+            user_id: document.getElementById("a-userid").value,
+            country: document.getElementById("a-country").value,
+            city: document.getElementById("a-city").value,
+            street: document.getElementById("a-street").value,
+            postal_code: document.getElementById("a-zip").value,
+          };
+
+          try {
+            const res = await fetch(getUrl("/addresses"), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(JSON.stringify(data));
+
+            log("Address Created!", data);
+            fetchAddresses();
+            document.getElementById("addr-form").reset();
+            // 保留 User ID 以便继续添加
+            document.getElementById("a-userid").value = payload.user_id;
+          } catch (e) {
+            log("Error creating address: " + e.message);
+          }
+        });
+
+      // 初始加载
+      // 延迟一点执行以等待用户输入URL (或者你可以硬编码默认URL)
+      // fetchUsers();
+      // fetchAddresses();
+    </script>
+  </body>
+</html>
