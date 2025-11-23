@@ -14,13 +14,11 @@ from fastapi import (
     Request
 )
 from fastapi.responses import JSONResponse
-# --- 导入 CORS 中间件 ---
 from fastapi.middleware.cors import CORSMiddleware 
 from datetime import datetime
 
 from models.user import UserRead, UserCreate, UserUpdate
 from models.address import Address, AddressCreate, AddressUpdate
-
 
 port = int(os.environ.get("FASTAPIPORT", 8000))
 
@@ -30,7 +28,6 @@ app = FastAPI(
     description="User & Address microservice.",
 )
 
-# --- CORS 配置 ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -38,7 +35,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 def get_connection():
     return pymysql.connect(
@@ -50,7 +46,6 @@ def get_connection():
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=True,
     )
-
 
 def row_to_user(row: Dict[str, Any]) -> UserRead:
     return UserRead(
@@ -64,7 +59,6 @@ def row_to_user(row: Dict[str, Any]) -> UserRead:
         updated_at=row["updated_at"],
     )
 
-
 def row_to_address(row: Dict[str, Any]) -> Address:
     return Address(
         id=UUID(row["id"]),
@@ -74,7 +68,6 @@ def row_to_address(row: Dict[str, Any]) -> Address:
         street=row["street"],
         postal_code=row["postal_code"],
     )
-
 
 def fetch_user_by_id(user_id: UUID) -> UserRead:
     conn = get_connection()
@@ -88,7 +81,6 @@ def fetch_user_by_id(user_id: UUID) -> UserRead:
     finally:
         conn.close()
 
-
 def fetch_address_by_id(address_id: UUID) -> Address:
     conn = get_connection()
     try:
@@ -101,12 +93,10 @@ def fetch_address_by_id(address_id: UUID) -> Address:
     finally:
         conn.close()
 
-
 def make_user_etag(user) -> str:
     ts = int(user.updated_at.timestamp() if isinstance(user.updated_at, datetime)
              else datetime.fromisoformat(str(user.updated_at)).timestamp())
     return f'W/"user-{user.id}-{ts}"'
-
 
 def user_link_headers(user_id) -> dict[str, str]:
     return {
@@ -116,11 +106,6 @@ def user_link_headers(user_id) -> dict[str, str]:
             f'</addresses?user_id={user_id}>; rel="addresses"'
         )
     }
-
-
-# ----------------------------------------------------------------------
-# Users
-# ----------------------------------------------------------------------
 
 @app.get("/users", response_model=List[UserRead], tags=["users"])
 def list_users(
@@ -152,6 +137,18 @@ def list_users(
     finally:
         conn.close()
 
+@app.get("/users/by_email/{email}", response_model=UserRead, tags=["users"])
+def get_user_by_email(email: str):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM users WHERE email = %s", (email,))
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="User not found")
+            return row_to_user(row)
+    finally:
+        conn.close()
 
 @app.post(
     "/users",
@@ -164,17 +161,14 @@ def create_user(payload: UserCreate, response: Response):
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            # 1. 检查用户是否存在 (Find)
             cur.execute("SELECT * FROM users WHERE email = %s", (payload.email,))
             existing_user = cur.fetchone()
 
             if existing_user:
-                # 存在则返回旧用户信息 (模拟登录)
                 response.status_code = status.HTTP_200_OK
                 response.headers["Location"] = f"/users/{existing_user['id']}"
                 return row_to_user(existing_user)
 
-            # 2. 不存在则创建 (Create)
             cur.execute(
                 """
                 INSERT INTO users
@@ -185,7 +179,7 @@ def create_user(payload: UserCreate, response: Response):
                     str(user_id),
                     payload.email,
                     payload.username,
-                    payload.password, 
+                    getattr(payload, 'password', None), 
                     payload.full_name,
                     str(payload.avatar_url) if payload.avatar_url else None,
                     payload.phone,
@@ -200,7 +194,6 @@ def create_user(payload: UserCreate, response: Response):
     response.headers["Location"] = f"/users/{user_id}"
     return user
 
-
 @app.get("/users/{user_id}", response_model=UserRead, tags=["users"])
 def get_user(user_id: UUID, request: Request, response: Response):
     user = fetch_user_by_id(user_id)
@@ -212,7 +205,6 @@ def get_user(user_id: UUID, request: Request, response: Response):
     response.headers["ETag"] = etag
     response.headers.update(user_link_headers(user_id))
     return user
-
 
 @app.put("/users/{user_id}", response_model=UserRead, tags=["users"])
 def replace_user(user_id: UUID, payload: UserUpdate, request: Request, response: Response):
@@ -263,7 +255,6 @@ def replace_user(user_id: UUID, payload: UserUpdate, request: Request, response:
     response.headers.update(user_link_headers(user_id))
     return updated
 
-
 @app.delete(
     "/users/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -280,11 +271,6 @@ def delete_user(user_id: UUID):
         conn.close()
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-# ----------------------------------------------------------------------
-# Addresses
-# ----------------------------------------------------------------------
 
 @app.get("/addresses", response_model=List[Address], tags=["addresses"])
 def list_addresses(
@@ -320,7 +306,6 @@ def list_addresses(
     finally:
         conn.close()
 
-
 @app.post(
     "/addresses",
     response_model=Address,
@@ -355,7 +340,6 @@ def create_address(payload: AddressCreate, response: Response):
     response.headers["Location"] = f"/addresses/{addr_id}"
     return addr
 
-
 @app.get("/addresses/{address_id}", response_model=Address, tags=["addresses"])
 def get_address(address_id: UUID, response: Response):
     addr = fetch_address_by_id(address_id)
@@ -365,7 +349,6 @@ def get_address(address_id: UUID, response: Response):
         f'</users/{addr.user_id}>; rel="user"'
     )
     return addr
-
 
 @app.put("/addresses/{address_id}", response_model=Address, tags=["addresses"])
 def replace_address(address_id: UUID, payload: AddressUpdate):
@@ -402,7 +385,6 @@ def replace_address(address_id: UUID, payload: AddressUpdate):
 
     return fetch_address_by_id(address_id)
 
-
 @app.delete(
     "/addresses/{address_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -420,20 +402,13 @@ def delete_address(address_id: UUID):
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-
-# ----------------------------------------------------------------------
-# Jobs
-# ----------------------------------------------------------------------
-
 jobs: Dict[str, Dict[str, Any]] = {}
-
 
 async def run_export_job(job_id: str, user_id: UUID):
     jobs[job_id]["status"] = "running"
     await asyncio.sleep(5)
     jobs[job_id]["status"] = "completed"
     jobs[job_id]["result"] = {"user_export_url": f"/users/{user_id}"}
-
 
 @app.post(
     "/users/{user_id}/export",
@@ -456,7 +431,6 @@ async def start_export_user(
         headers={"Location": f"/jobs/{job_id}"},
     )
 
-
 @app.get("/jobs/{job_id}", tags=["jobs"])
 def get_job_status(job_id: str):
     job = jobs.get(job_id)
@@ -464,14 +438,10 @@ def get_job_status(job_id: str):
         raise HTTPException(status_code=404, detail="Job not found")
     return job
 
-
 @app.get("/")
 def root():
     return {"message": "Welcome to the User/Address API."}
 
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
-
-
