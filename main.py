@@ -44,7 +44,7 @@ def get_connection():
     return pymysql.connect(
         # --- 修改重点：把默认值直接改成你的远程数据库信息 ---
         # 这样即使不设置环境变量，也能直接连上
-        host=os.getenv("MYSQL_HOST", "10.128.0.6"),  
+        host=os.getenv("MYSQL_HOST", "10.128.0.3"),  
         port=int(os.getenv("MYSQL_PORT", "3306")),
         user=os.getenv("MYSQL_USER", "dbuser"),      
         password=os.getenv("MYSQL_PASSWORD", "dbuserdbuser"), 
@@ -475,3 +475,4 @@ def root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+
