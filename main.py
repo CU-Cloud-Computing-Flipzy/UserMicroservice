@@ -14,7 +14,7 @@ from fastapi import (
     Request
 )
 from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware 
+from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 
 from models.user import UserRead, UserCreate, UserUpdate
@@ -25,7 +25,7 @@ port = int(os.environ.get("FASTAPIPORT", 8000))
 app = FastAPI(
     title="User Service",
     version="0.2.0",
-    description="User & Address microservice.",
+    description="User & Address microservice."
 )
 
 app.add_middleware(
@@ -40,7 +40,7 @@ def get_connection():
     return pymysql.connect(
         host=os.getenv("MYSQL_HOST", "10.128.0.3"),
         port=int(os.getenv("MYSQL_PORT", "3306")),
-        user=os.getenv("MYSQL_USER", "user_microservice"), 
+        user=os.getenv("MYSQL_USER", "user_microservice"),
         password=os.getenv("MYSQL_PASSWORD", "root1234"),
         database=os.getenv("MYSQL_DB", "userservice"),
         cursorclass=pymysql.cursors.DictCursor,
@@ -56,7 +56,7 @@ def row_to_user(row: Dict[str, Any]) -> UserRead:
         avatar_url=row["avatar_url"],
         phone=row["phone"],
         created_at=row["created_at"],
-        updated_at=row["updated_at"],
+        updated_at=row["updated_at"]
     )
 
 def row_to_address(row: Dict[str, Any]) -> Address:
@@ -66,7 +66,7 @@ def row_to_address(row: Dict[str, Any]) -> Address:
         country=row["country"],
         city=row["city"],
         street=row["street"],
-        postal_code=row["postal_code"],
+        postal_code=row["postal_code"]
     )
 
 def fetch_user_by_id(user_id: UUID) -> UserRead:
@@ -112,7 +112,7 @@ def list_users(
     email: Optional[str] = Query(None),
     username: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0)
 ):
     conn = get_connection()
     try:
@@ -154,7 +154,7 @@ def get_user_by_email(email: str):
     "/users",
     response_model=UserRead,
     status_code=status.HTTP_201_CREATED,
-    tags=["users"],
+    tags=["users"]
 )
 def create_user(payload: UserCreate, response: Response):
     user_id = uuid4()
@@ -172,21 +172,18 @@ def create_user(payload: UserCreate, response: Response):
             cur.execute(
                 """
                 INSERT INTO users
-                    (id, email, username, password, full_name, avatar_url, phone)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    (id, email, username, full_name, avatar_url, phone)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 """,
                 (
                     str(user_id),
                     payload.email,
                     payload.username,
-                    getattr(payload, 'password', None), 
                     payload.full_name,
                     str(payload.avatar_url) if payload.avatar_url else None,
-                    payload.phone,
-                ),
+                    payload.phone
+                )
             )
-    except pymysql.err.IntegrityError:
-        raise HTTPException(status_code=400, detail="Username already exists")
     finally:
         conn.close()
 
@@ -258,7 +255,7 @@ def replace_user(user_id: UUID, payload: UserUpdate, request: Request, response:
 @app.delete(
     "/users/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    tags=["users"],
+    tags=["users"]
 )
 def delete_user(user_id: UUID):
     conn = get_connection()
@@ -310,7 +307,7 @@ def list_addresses(
     "/addresses",
     response_model=Address,
     status_code=status.HTTP_201_CREATED,
-    tags=["addresses"],
+    tags=["addresses"]
 )
 def create_address(payload: AddressCreate, response: Response):
     addr_id = uuid4()
@@ -330,8 +327,8 @@ def create_address(payload: AddressCreate, response: Response):
                     payload.country,
                     payload.city,
                     payload.street,
-                    payload.postal_code,
-                ),
+                    payload.postal_code
+                )
             )
     finally:
         conn.close()
@@ -388,7 +385,7 @@ def replace_address(address_id: UUID, payload: AddressUpdate):
 @app.delete(
     "/addresses/{address_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    tags=["addresses"],
+    tags=["addresses"]
 )
 def delete_address(address_id: UUID):
     conn = get_connection()
@@ -413,11 +410,11 @@ async def run_export_job(job_id: str, user_id: UUID):
 @app.post(
     "/users/{user_id}/export",
     status_code=status.HTTP_202_ACCEPTED,
-    tags=["users"],
+    tags=["users"]
 )
 async def start_export_user(
     user_id: UUID,
-    background_tasks: BackgroundTasks,
+    background_tasks: BackgroundTasks
 ):
     fetch_user_by_id(user_id)
 
@@ -428,7 +425,7 @@ async def start_export_user(
     return JSONResponse(
         status_code=status.HTTP_202_ACCEPTED,
         content={"job_id": job_id, "status": "pending"},
-        headers={"Location": f"/jobs/{job_id}"},
+        headers={"Location": f"/jobs/{job_id}"}
     )
 
 @app.get("/jobs/{job_id}", tags=["jobs"])
