@@ -14,6 +14,8 @@ from fastapi import (
     Request
 )
 from fastapi.responses import JSONResponse
+# --- 导入 CORS 中间件 ---
+from fastapi.middleware.cors import CORSMiddleware 
 from datetime import datetime
 
 from models.user import UserRead, UserCreate, UserUpdate
@@ -28,14 +30,25 @@ app = FastAPI(
     description="User & Address microservice.",
 )
 
+# --- CORS 配置 ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 def get_connection():
     return pymysql.connect(
-        host=os.getenv("MYSQL_HOST", "127.0.0.1"),
+        # --- 修改重点：把默认值直接改成你的远程数据库信息 ---
+        # 这样即使不设置环境变量，也能直接连上
+        host=os.getenv("MYSQL_HOST", "10.128.0.6"),  
         port=int(os.getenv("MYSQL_PORT", "3306")),
-        user=os.getenv("MYSQL_USER", "root"),
-        password=os.getenv("MYSQL_PASSWORD", ""),
-        database=os.getenv("MYSQL_DB", "user_service"),
+        user=os.getenv("MYSQL_USER", "dbuser"),      
+        password=os.getenv("MYSQL_PASSWORD", "dbuserdbuser"), 
+        database=os.getenv("MYSQL_DB", "userservice"), # 注意：数据库名没有下划线
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=True,
     )
@@ -152,26 +165,36 @@ def create_user(payload: UserCreate, response: Response):
     user_id = uuid4()
     conn = get_connection()
     try:
-        try:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO users
-                        (id, email, username, password, full_name, avatar_url, phone)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    """,
-                    (
-                        str(user_id),
-                        payload.email,
-                        payload.username,
-                        payload.password,
-                        payload.full_name,
-                        str(payload.avatar_url) if payload.avatar_url else None,
-                        payload.phone,
-                    ),
-                )
-        except pymysql.err.IntegrityError:
-            raise HTTPException(status_code=400, detail="Email or username already exists")
+        with conn.cursor() as cur:
+            # 1. 检查用户是否存在 (Find)
+            cur.execute("SELECT * FROM users WHERE email = %s", (payload.email,))
+            existing_user = cur.fetchone()
+
+            if existing_user:
+                # 存在则返回旧用户信息 (模拟登录)
+                response.status_code = status.HTTP_200_OK
+                response.headers["Location"] = f"/users/{existing_user['id']}"
+                return row_to_user(existing_user)
+
+            # 2. 不存在则创建 (Create)
+            cur.execute(
+                """
+                INSERT INTO users
+                    (id, email, username, password, full_name, avatar_url, phone)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    str(user_id),
+                    payload.email,
+                    payload.username,
+                    payload.password, 
+                    payload.full_name,
+                    str(payload.avatar_url) if payload.avatar_url else None,
+                    payload.phone,
+                ),
+            )
+    except pymysql.err.IntegrityError:
+        raise HTTPException(status_code=400, detail="Username already exists")
     finally:
         conn.close()
 
