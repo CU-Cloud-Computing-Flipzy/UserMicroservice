@@ -5,7 +5,7 @@ def main():
     connection = pymysql.connect(
         host="10.128.0.3",       # or your server IP / hostname
         user="user_microservice",          # MySQL username
-        password="1234",  # MySQL password
+        password="root1234",  # MySQL password
         port=3306               # Default MySQL port
     )
 
