@@ -41,7 +41,7 @@ def get_connection():
         host=os.getenv("MYSQL_HOST", "10.128.0.3"),
         port=int(os.getenv("MYSQL_PORT", "3306")),
         user=os.getenv("MYSQL_USER", "user_microservice"), 
-        password=os.getenv("MYSQL_PASSWORD", "1234"),
+        password=os.getenv("MYSQL_PASSWORD", "root1234"),
         database=os.getenv("MYSQL_DB", "userservice"),
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=True,
