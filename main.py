@@ -55,6 +55,7 @@ def row_to_user(row: Dict[str, Any]) -> UserRead:
         full_name=row["full_name"],
         avatar_url=row["avatar_url"],
         phone=row["phone"],
+        role=row["role"],
         created_at=row["created_at"],
         updated_at=row["updated_at"]
     )
@@ -172,8 +173,8 @@ def create_user(payload: UserCreate, response: Response):
             cur.execute(
                 """
                 INSERT INTO users
-                    (id, email, username, full_name, avatar_url, phone)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                    (id, email, username, full_name, avatar_url, phone, role)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     str(user_id),
@@ -181,7 +182,8 @@ def create_user(payload: UserCreate, response: Response):
                     payload.username,
                     payload.full_name,
                     str(payload.avatar_url) if payload.avatar_url else None,
-                    payload.phone
+                    payload.phone,
+                    payload.role
                 )
             )
     finally:
@@ -229,6 +231,9 @@ def replace_user(user_id: UUID, payload: UserUpdate, request: Request, response:
         if payload.phone is not None:
             fields.append("phone = %s")
             params.append(payload.phone)
+        if payload.role is not None:
+            fields.append("role = %s")
+            params.append(payload.role)
 
         if not fields:
             response.headers["ETag"] = current_etag

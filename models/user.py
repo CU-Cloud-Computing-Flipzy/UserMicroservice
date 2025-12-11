@@ -1,6 +1,6 @@
 # models/user.py
 from uuid import UUID
-from typing import Optional
+from typing import Optional, Literal
 from datetime import datetime
 from pydantic import BaseModel, Field, EmailStr, HttpUrl
 
@@ -9,13 +9,15 @@ class UserBrief(BaseModel):
     id: UUID = Field(..., description="User ID (UUID)")
     username: str = Field(..., min_length=3, max_length=30, description="username")
     avatar_url: Optional[HttpUrl] = Field(None, description="avatar URL")
+    role: Literal["user", "admin"] = Field(..., description="Role of the user (user or admin)")
 
     model_config = {
         "json_schema_extra": {
             "example": {
                 "id": "6f3e3c14-1e1d-46fd-9a77-7d6d85b3d2c3",
                 "username": "alice_shop",
-                "avatar_url": "https://cdn.example.com/avatars/alice.png"
+                "avatar_url": "https://cdn.example.com/avatars/alice.png",
+                "role": "user"
             }
         }
     }
@@ -28,6 +30,7 @@ class UserRead(BaseModel):
     full_name: Optional[str] = Field(None, min_length=1, max_length=50, description="full name")
     avatar_url: Optional[HttpUrl] = Field(None, description="avatar URL")
     phone: Optional[str] = Field(None, min_length=6, max_length=30, description="phone number")
+    role: Literal["user", "admin"] = Field(..., description="Role of the user (user or admin)")
     created_at: datetime = Field(..., description="created time")
     updated_at: datetime = Field(..., description="updated time")
 
@@ -40,6 +43,7 @@ class UserRead(BaseModel):
                 "full_name": "Alice Zhou",
                 "avatar_url": "https://cdn.example.com/avatars/alice.png",
                 "phone": "+1-215-000-0000",
+                "role": "admin",
                 "created_at": "2025-10-17T12:00:00Z",
                 "updated_at": "2025-10-17T12:10:00Z"
             }
@@ -53,6 +57,7 @@ class UserCreate(BaseModel):
     full_name: Optional[str] = Field(None, min_length=1, max_length=50, description="full name")
     avatar_url: Optional[HttpUrl] = Field(None, description="avatar URL")
     phone: Optional[str] = Field(None, min_length=6, max_length=30, description="phone number")
+    role: Literal["user", "admin"] = Field("user", description="Role of the user (default: user)")
 
     model_config = {
         "json_schema_extra": {
@@ -61,7 +66,8 @@ class UserCreate(BaseModel):
                 "username": "alice_shop",
                 "full_name": "Alice Zhou",
                 "avatar_url": "https://cdn.example.com/avatars/alice.png",
-                "phone": "+1-215-000-0000"
+                "phone": "+1-215-000-0000",
+                "role": "user"
             }
         }
     }
@@ -72,6 +78,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(None, min_length=1, max_length=50, description="full name")
     avatar_url: Optional[HttpUrl] = Field(None, description="avatar URL")
     phone: Optional[str] = Field(None, min_length=6, max_length=30, description="phone number")
+    role: Optional[Literal["user", "admin"]] = Field(None, description="Role of the user (user or admin)")
 
     model_config = {
         "json_schema_extra": {
@@ -79,7 +86,8 @@ class UserUpdate(BaseModel):
                 "username": "alice_updated",
                 "full_name": "Alice Z.",
                 "avatar_url": "https://cdn.example.com/avatars/alice-new.png",
-                "phone": "+1-215-000-0000"
+                "phone": "+1-215-000-0000",
+                "role": "admin"
             }
         }
     }
